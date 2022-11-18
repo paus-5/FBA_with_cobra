@@ -1,0 +1,76 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{xcolor}
+\usepackage{graphicx}
+%\usepackage[french]{babel}
+\usepackage{csquotes}
+\usepackage{amsmath,amsfonts,amssymb}
+\DeclareMathOperator*{\argmin}{arg~min}
+\DeclareMathOperator*{\argmax}{arg~max}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\diag}{\mathbb{\mbox{diag}}}
+\usepackage{amsthm}
+\usepackage{bbm}
+\usepackage{lineno}
+\usepackage{tikz}
+\usetikzlibrary{positioning,calc}
+\usepackage[a4paper,margin=1in]{geometry}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+
+\def\scale{1cm}
+
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\usepackage{authblk}
+\title{Some Notes on Cobra Py}
+\author{Pablo Ugalde-Salas}
+\date{} 
+\begin{document}
+	\maketitle
+\section{Preliminaries}
+\begin{itemize}
+\item Documentation can be found in \url{https://cobrapy.readthedocs.io/en/latest/}
+\item Cobra uses the notation of Systems biology Markup Language (SBML) \url{https://sbml.org/}	which accepts xml files for example to describe the metabolism
+\item A pipeline for obtaining xml files from metagenomes can be found in \url{https://github.com/AuReMe/metage2metabo}. 
+\end{itemize}
+	
+
+\paragraph{FBA framework to model microbial metabolism. \label{sec:FBA}}
+
+
+%\subsection{Microbial metabolism described as an optimization problem}
+A classical modelling framework to represent the microbial metabolism is Flux Balance Analysis (FBA) \cite{Orth.2010,schellenberger2011quantitative}. FBA relies on metabolic models inferred from microorganism genome: the genes are annotated to identify the biochemical reactions they code for and the whole set of reactions is combined into a genome-scale metabolic network connecting the substrate metabolites the microorganism is able to metabolize to the synthesized biomass and end-products produced by the microbe. 
+
+Namely, if we note $(m_i)_{1\leqslant i \leqslant N_m}$ the set of the $N_m$ metabolites that can be found in a micro-organism, and $(r_j)_{1\leqslant j \leqslant N_r}$ the set of the $N_r$ reactions coded in the genome, then mass conservation equations can be written on the internal concentration of the metabolites :
+
+\begin{equation}
+	\label{eq:mass-conservation}
+	\partial_t [m_i] = \sum_{j \in R(m_i)} \theta_{m_i,j} \nu_{j}
+\end{equation} 
+
+In this equation, $R(m_i)$ is the subset of reactions involving the metabolite $m_i$, $\theta_{m_i,j}$ is the stoichiometric coefficient of the metabolite $m_i$ in the reaction $j$ (negative for consumption reaction, and positive for production reaction) and $\nu_{j}$ is the reaction flux, i.e. the quantity of metabolite involved in the reaction by time and microbial biomass units (the flux unit is $m mol.h^{-1}.g^{-1}$). In FBA models, an additional fictitious biochemical reaction is considered: the biomass reaction $r_b$, with its corresponding fictional molecule $b$ representing biomass. This comes from an abstraction of the mean content of the cell, and the energetic cost to synthesize it, see for example the works of Battley \textit{et al. }\cite{battley1998development}. This reaction connects the biomass precursors to the biomass $b$ with the chemical equation
+
+\[ \sum_{ i \in M(b)} \theta_{m_i,r_b} m_i \to b \]
+where $\theta_{m_i,r_b}$ is the stoichiometric coefficient of metabolite $m_i$ in the biomass reaction $r_b$ and $M(b)$ is the subset of metabolites $m_i$ that constitute the biomass, i.e. the metabolites needed by the microorganism for growth (to duplicate the genomic material, the metabolism machinery, the cellular membrane, etc...). The metabolic flux flowing through this biomass equation is noted $\nu_b$ and is then the amount of microbial biomass produced by time and biomass unit, with unit ($g.h^{-1}.g^{-1}$ by convention, or $h^{-1}$).
+
+
+The FBA models aim to predict this growth rate $\nu_b$ while observing biological constraints such as the mass conservation equations \eqref{eq:mass-conservation}. To achieve this prediction, the FBA framework makes important simplifying assumptions: 1) \textit{Steady-state assumption.} All internal metabolites are assumed to be at steady-state in the cell, so that the mass conservation equation \eqref{eq:mass-conservation} reduces to a linear system on the lux vector $\nu := (\nu_j)_{1\leqslant j \leqslant N_r}$ gathering the fluxes of the $N_r$ reactions of the metabolic network,  
+\[A \cdot \nu = 0\]
+where $A$ is the reaction matrix, i.e. the matrix of dimension $N_m \times N_r$ with $A_{ij} := \theta_{m_i,j}$ the stoichiometric coefficient of metabolite $i$ in the reaction $j$, gathering the whole set of conservation equations for the metabolites and reactions involved in the metabolic network; 2) \textit{Biomass maximization.} The microbes are assumed to be instantaneously maximizing the biomass production in a given nutritional context; 3) \textit{Flux constraints.} Every flux are constrained by intrinsic limits, related for example to metabolite transporter capacities, or known enzymatic efficiency. These limits are noted $c_{min}$ and $c_{max}$ so that $c_{min} \leq \nu \leq c_{max}$.
+
+
+
+Hence, the biomass production and all the metabolic fluxes in the microbial machinery can be predicted with the constrained optimization FBA problem
+
+\begin{equation}
+	\label{eq:maximization-FBA}
+	\text{find }\nu^* \in \R^{N_r}, \text{such that } \nu^* := \argmax\limits_{\begin{array}{c}\nu \in \R^{N_r}\\ A \cdot \nu = 0 \\ c_{min} \leq \nu \leq c_{max} \end{array}} \nu_b
+\end{equation}
+
+This problem searches for the optimal growth rate represented by the component $\nu_b$, which is the biomass formation flux.It is obtained by the system under mass-balance and flux constraints. Mathematically speaking, this optimization problem is linear and can be solved using linear programming: very efficient solvers exist for such a problem, even for high dimensional problems like this one, where $N_r$ is classically around several thousands. A classical FBA toolbox is the Cobra toolbox (in Matlab environment)  \cite{Heirendt.2019} or its python equivalent Cobrapy \cite{ebrahim2013cobrapy}. 
+	
+\end{document}
